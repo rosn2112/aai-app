@@ -10,7 +10,7 @@ Terminal-first video summarizer for macOS.
 
 ## Install
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/rosn2112/aai-app
 cd aai-app-v0.1
 ./install.sh
 source ~/.zshrc
