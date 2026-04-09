@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aai-app-local"
+version = "0.1.0"
+description = "Local-first terminal app for YouTube and Instagram summaries."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "prompt-toolkit>=3.0.43",
+  "rich>=13.9.4",
+  "typer>=0.15.2",
+]
+
+[project.optional-dependencies]
+runtime = [
+  "faster-whisper>=1.1.1",
+  "huggingface_hub>=0.30.2",
+  "imageio-ffmpeg>=0.6.0",
+  "yt-dlp>=2025.3.31",
+]
+mcp = [
+  "mcp[cli]>=1.0.0",
+]
+
+[project.scripts]
+aai-app = "aai_app.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["aai_app"]
