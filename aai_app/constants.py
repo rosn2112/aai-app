@@ -24,6 +24,8 @@ COMMANDS = [
     "/thinking",
     "/auth",
     "/integrations",
+    "/connect",
+    "/tools",
     "/import",
     "/export",
     "/help",

@@ -21,7 +21,13 @@ from aai_app.constants import APP_NAME, APP_TAGLINE, APP_VERSION, COMMANDS
 from aai_app.core.chat import chat_with_local_model, stream_chat_with_local_model
 from aai_app.core.pipeline import summarize_url
 from aai_app.doctor import get_runtime_status, run_doctor
-from aai_app.integrations import export_to_mcp, load_integration_configs, import_from_mcp
+from aai_app.integrations import (
+    enable_integration,
+    export_to_mcp,
+    list_mcp_tools,
+    load_integration_configs,
+    import_from_mcp,
+)
 from aai_app.memory import ChatSession, MemoryStore
 from aai_app.parser import parse_command, parse_media_request
 from aai_app.rendering import render_message_content, render_stream_text
@@ -50,6 +56,8 @@ def _help_panel() -> Panel:
     command_table.add_row("/thinking [on|off]", "Toggle the thinking/status metadata block")
     command_table.add_row("/auth", "Configure Ollama and optional Gemini YouTube settings")
     command_table.add_row("/integrations", "List configured MCP integrations")
+    command_table.add_row("/connect <server>", "Enable an MCP integration profile and show setup guidance")
+    command_table.add_row("/tools <server>", "List tools exposed by a configured MCP integration")
     command_table.add_row("/import <server> <query>", "Pull context from an MCP integration")
     command_table.add_row("/export <server> [title]", "Export the current chat to an MCP integration")
     command_table.add_row("/new", "Start a fresh saved chat session")
@@ -114,7 +122,10 @@ def _integrations_table(config: AppConfig) -> Table:
     for server in load_integration_configs(config):
         status = "enabled" if server.enabled else "disabled"
         command = " ".join([server.command, *server.args]).strip()
-        table.add_row(server.name, status, command or "-", server.description or "")
+        notes = server.description or ""
+        if server.setup_url:
+            notes = f"{notes}\nsetup: {server.setup_url}".strip()
+        table.add_row(server.name, status, command or "-", notes)
     return table
 
 
@@ -325,6 +336,17 @@ def _integration_panel(title: str, body_text: str) -> Panel:
     )
 
 
+def _connect_panel(server_name: str, enabled: bool, auth_hint: str, setup_url: str) -> Panel:
+    body = Text()
+    body.append(f"Integration profile: {server_name}\n", style="bold #22c55e")
+    body.append(f"status               {'enabled' if enabled else 'disabled'}\n", style="#94a3b8")
+    if auth_hint:
+        body.append(f"\nAuth/setup\n{auth_hint}\n", style="white")
+    if setup_url:
+        body.append(f"\nReference\n{setup_url}\n", style="#7dd3fc")
+    return Panel(body, title="Integration", border_style="#22c55e", padding=(1, 3), width=96)
+
+
 def _auth_panel(config: AppConfig) -> Panel:
     body = Text()
     body.append("Provider settings saved.\n\n", style="bold #22c55e")
@@ -475,6 +497,32 @@ def run_shell(config: AppConfig) -> None:
                     continue
                 if command.name == "/integrations":
                     console.print(_centered(_integrations_table(config), width=96))
+                    continue
+                if command.name == "/connect":
+                    target = (command.argument or "").strip()
+                    if not target:
+                        raise ValueError("Use /connect <server>")
+                    server = enable_integration(config, target)
+                    console.print(
+                        _centered(
+                            _connect_panel(server.name, server.enabled, server.auth_hint, server.setup_url),
+                            width=96,
+                        )
+                    )
+                    continue
+                if command.name == "/tools":
+                    target = (command.argument or "").strip()
+                    if not target:
+                        raise ValueError("Use /tools <server>")
+                    tools = list_mcp_tools(config, target)
+                    if not tools:
+                        raise RuntimeError(f"No tools were exposed by '{target}'.")
+                    console.print(
+                        _centered(
+                            _integration_panel("MCP Tools", f"server  {target}\n\n" + "\n".join(f"- {tool}" for tool in tools)),
+                            width=96,
+                        )
+                    )
                     continue
                 if command.name == "/new":
                     current_session = memory.create_session()

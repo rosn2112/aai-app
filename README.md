@@ -43,3 +43,15 @@ ollama pull gemma4:e4b
 ```bash
 aai-app --uninstall
 ```
+
+
+## Upgrade
+```bash
+aai-app --upgrade
+```
+
+## MCP Integrations
+- `/integrations` lists configured MCP profiles
+- `/connect <server>` enables a profile and shows setup guidance
+- `/tools <server>` lists MCP tools for a configured stdio server
+- `/import <server> <query>` and `/export <server> [title]` use the selected MCP server

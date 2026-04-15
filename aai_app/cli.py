@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+import subprocess
+from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -22,12 +24,26 @@ def _resolve_config(app_home: str | None) -> AppConfig:
     return load_config(app_home)
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _run_upgrade() -> None:
+    install_script = _repo_root() / "install.sh"
+    if not install_script.exists():
+        raise RuntimeError(f"Install script not found at {install_script}")
+    subprocess.run(["bash", str(install_script)], check=True)
+
+
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
     app_home: str | None = typer.Option(None, "--app-home"),
     uninstall: bool = typer.Option(False, "--uninstall", help="Remove AAI App and exit."),
+    upgrade: bool = typer.Option(False, "--upgrade", help="Upgrade AAI App by rerunning the installer."),
 ) -> None:
+    if uninstall and upgrade:
+        raise typer.BadParameter("Use either --uninstall or --upgrade, not both.")
     if uninstall:
         config = _resolve_config(app_home)
         purge_external = typer.confirm(
@@ -37,6 +53,10 @@ def main_callback(
         path = launch_uninstall(config, purge_external=purge_external)
         typer.echo("AAI App uninstall scheduled.")
         typer.echo(f"Temporary uninstall script: {path}")
+        raise typer.Exit()
+    if upgrade:
+        typer.echo("Running AAI App upgrade...")
+        _run_upgrade()
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
         run_shell(_resolve_config(app_home))
