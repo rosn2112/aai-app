@@ -29,6 +29,30 @@ def _ollama_model_installed(ollama_bin: str, model_name: str) -> bool:
     return any(line.split()[0] == model_name for line in lines[1:])
 
 
+def _ensure_yt_dlp(config, console: Console) -> str:
+    venv_bin = Path(sys.executable).resolve().parent
+    direct_binary = shutil.which("yt-dlp") or str(venv_bin / "yt-dlp")
+    if direct_binary and Path(direct_binary).exists():
+        return direct_binary
+
+    try:
+        import yt_dlp  # noqa: F401
+    except ImportError as exc:
+        raise RuntimeError(
+            "yt-dlp is not installed in the active environment. "
+            "Rerun `./install.sh` so it can install the runtime dependencies into the app venv."
+        ) from exc
+
+    shim_path = config.bin_dir / "yt-dlp"
+    shim_path.write_text(
+        "#!/usr/bin/env bash\n"
+        f"exec \"{sys.executable}\" -m yt_dlp \"$@\"\n"
+    )
+    shim_path.chmod(shim_path.stat().st_mode | stat.S_IEXEC)
+    console.print(f"Created yt-dlp launcher shim at {shim_path}")
+    return str(shim_path)
+
+
 def bootstrap_with_options(
     app_home: str | None = None,
     inference_mode: str | None = None,
@@ -54,16 +78,7 @@ def bootstrap_with_options(
             "or use `./install.sh` for the full setup."
         ) from exc
 
-    venv_bin = Path(sys.executable).resolve().parent
-    yt_dlp_path = shutil.which("yt-dlp") or str(venv_bin / "yt-dlp")
-    if yt_dlp_path and not Path(yt_dlp_path).exists():
-        yt_dlp_path = None
-    if not yt_dlp_path:
-        raise RuntimeError(
-            "yt-dlp is not installed in the active environment. "
-            "Rerun `./install.sh` so it can install the runtime dependencies into the app venv."
-        )
-    config.yt_dlp_path = yt_dlp_path
+    config.yt_dlp_path = _ensure_yt_dlp(config, console)
 
     ffmpeg_source = Path(imageio_ffmpeg.get_ffmpeg_exe())
     ffmpeg_target = config.bin_dir / "ffmpeg"
