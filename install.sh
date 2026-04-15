@@ -14,6 +14,11 @@ python_meets_requirement() {
   "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1
 }
 
+python_major_minor() {
+  local candidate="$1"
+  "$candidate" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'
+}
+
 select_python() {
   local candidates=()
   local candidate
@@ -56,8 +61,14 @@ fi
 
 mkdir -p "$APP_HOME" "$LOCAL_BIN"
 
-if [[ -x "$VENV_DIR/bin/python" ]] && ! python_meets_requirement "$VENV_DIR/bin/python"; then
-  rm -rf "$VENV_DIR"
+SELECTED_PYTHON_MM="$(python_major_minor "$PYTHON_BIN")"
+
+if [[ -d "$VENV_DIR" ]]; then
+  if [[ ! -x "$VENV_DIR/bin/python" ]] || ! python_meets_requirement "$VENV_DIR/bin/python"; then
+    rm -rf "$VENV_DIR"
+  elif [[ "$(python_major_minor "$VENV_DIR/bin/python")" != "$SELECTED_PYTHON_MM" ]]; then
+    rm -rf "$VENV_DIR"
+  fi
 fi
 
 if [[ ! -d "$VENV_DIR" ]]; then

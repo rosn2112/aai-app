@@ -4,6 +4,7 @@ import argparse
 import subprocess
 import shutil
 import stat
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -53,9 +54,15 @@ def bootstrap_with_options(
             "or use `./install.sh` for the full setup."
         ) from exc
 
-    yt_dlp_path = shutil.which("yt-dlp")
+    venv_bin = Path(sys.executable).resolve().parent
+    yt_dlp_path = shutil.which("yt-dlp") or str(venv_bin / "yt-dlp")
+    if yt_dlp_path and not Path(yt_dlp_path).exists():
+        yt_dlp_path = None
     if not yt_dlp_path:
-        raise RuntimeError("yt-dlp is not installed in the active environment")
+        raise RuntimeError(
+            "yt-dlp is not installed in the active environment. "
+            "Rerun `./install.sh` so it can install the runtime dependencies into the app venv."
+        )
     config.yt_dlp_path = yt_dlp_path
 
     ffmpeg_source = Path(imageio_ffmpeg.get_ffmpeg_exe())
