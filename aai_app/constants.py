@@ -18,6 +18,7 @@ DEFAULT_LLAMA_MODEL_FILE = "gemma-4-e4b-it-Q4_K_M.gguf"
 COMMANDS = [
     "/youtube",
     "/instagram",
+    "/model",
     "/doctor",
     "/models",
     "/settings",
@@ -30,8 +31,6 @@ COMMANDS = [
     "/export",
     "/help",
     "/exit",
-    "/yt",
-    "/ig",
     "/new",
     "/sessions",
     "/resume",

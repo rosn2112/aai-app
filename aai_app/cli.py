@@ -12,7 +12,7 @@ from rich.table import Table
 from aai_app.bootstrap import bootstrap
 from aai_app.config import AppConfig, load_config
 from aai_app.core.pipeline import summarize_url
-from aai_app.doctor import get_runtime_status, run_doctor
+from aai_app.doctor import get_runtime_status, list_ollama_models, run_doctor
 from aai_app.parser import parse_command, parse_media_request
 from aai_app.shell import run_shell
 from aai_app.uninstall import launch_uninstall
@@ -102,6 +102,20 @@ def models(
     table.add_row("Ollama model", config.ollama_model)
     table.add_row("Whisper model", config.whisper_model_name)
     console.print(table)
+    installed = Table(title="Installed Ollama Models")
+    installed.add_column("Model")
+    try:
+        model_names = list_ollama_models(config)
+    except Exception as exc:
+        installed.add_row(f"Could not query Ollama models: {exc}")
+    else:
+        if model_names:
+            for name in model_names:
+                suffix = " (active)" if name == config.ollama_model else ""
+                installed.add_row(f"{name}{suffix}")
+        else:
+            installed.add_row("No Ollama models installed")
+    console.print(installed)
 
 
 @app.command()
@@ -120,6 +134,14 @@ def main() -> None:
                 return
             if command.name == "/models":
                 models()
+                return
+            if command.name == "/model":
+                target_model = (command.argument or "").strip()
+                if not target_model:
+                    raise ValueError("Use /model <ollama-model-name>")
+                config.ollama_model = target_model
+                config.save()
+                console.print(Panel(f"Active model set to {target_model}", title="Model Switch", border_style="green"))
                 return
             if not command.argument:
                 raise ValueError("A URL is required for slash commands")

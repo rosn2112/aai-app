@@ -53,9 +53,7 @@ def summarize_url(
     platform_name = detect_platform(url)
     expected = {
         "/youtube": "youtube",
-        "/yt": "youtube",
         "/instagram": "instagram",
-        "/ig": "instagram",
     }.get(command_name, command_name.removeprefix("/"))
     if expected != platform_name:
         raise ValueError(f"{command_name} does not support {platform_name} URLs")

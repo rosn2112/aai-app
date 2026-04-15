@@ -20,7 +20,7 @@ from aai_app.config import AppConfig
 from aai_app.constants import APP_NAME, APP_TAGLINE, APP_VERSION, COMMANDS
 from aai_app.core.chat import chat_with_local_model, stream_chat_with_local_model
 from aai_app.core.pipeline import summarize_url
-from aai_app.doctor import get_runtime_status, run_doctor
+from aai_app.doctor import get_runtime_status, list_ollama_models, run_doctor
 from aai_app.integrations import (
     enable_integration,
     export_to_mcp,
@@ -50,6 +50,7 @@ def _help_panel() -> Panel:
     command_table.add_row("plain text", "Chat with the selected assistant backend")
     command_table.add_row("/youtube <url> [--keep-downloads]", "Summarize a YouTube video")
     command_table.add_row("/instagram <url> [--keep-downloads]", "Summarize an Instagram reel")
+    command_table.add_row("/model <name>", "Switch the active Ollama model")
     command_table.add_row("/doctor", "Show install status and missing requirements")
     command_table.add_row("/models", "Show the current backend and installed model paths")
     command_table.add_row("/settings", "Show runtime settings and local model configuration")
@@ -97,6 +98,27 @@ def _models_table(config: AppConfig) -> Table:
     table.add_row("yt-dlp binary", config.yt_dlp_path or "not configured")
     table.add_row("ffmpeg binary", config.ffmpeg_path or "not configured")
     return table
+
+
+def _installed_models_panel(config: AppConfig) -> Panel:
+    try:
+        models = list_ollama_models(config)
+    except Exception as exc:
+        return Panel(
+            f"Could not query Ollama models.\n\n{exc}",
+            title="Installed Ollama Models",
+            border_style="#f59e0b",
+            padding=(1, 3),
+            width=96,
+        )
+    if not models:
+        body = "No Ollama models are installed yet."
+    else:
+        body = "\n".join(
+            f"- {model}" + ("  (active)" if model == config.ollama_model else "")
+            for model in models
+        )
+    return Panel(body, title="Installed Ollama Models", border_style="#334155", padding=(1, 3), width=96)
 
 
 def _settings_table(config: AppConfig) -> Table:
@@ -312,6 +334,16 @@ def _thinking_panel(config: AppConfig) -> Panel:
     return Panel(body, title="Display", border_style="#22c55e", padding=(1, 3), width=96)
 
 
+def _model_panel(config: AppConfig) -> Panel:
+    return Panel(
+        f"Active model set to:\n\n{config.ollama_model}",
+        title="Model Switch",
+        border_style="#22c55e",
+        padding=(1, 3),
+        width=96,
+    )
+
+
 def _friendly_error(exc: Exception) -> Panel:
     return Panel(
         Text.assemble(
@@ -473,8 +505,16 @@ def run_shell(config: AppConfig) -> None:
                     console.print(_centered(_doctor_table(config), width=96))
                     continue
                 if command.name == "/models":
-                    model_scope = (command.argument or "").strip().lower()
                     console.print(_centered(_models_table(config), width=96))
+                    console.print(_centered(_installed_models_panel(config), width=96))
+                    continue
+                if command.name == "/model":
+                    target_model = (command.argument or "").strip()
+                    if not target_model:
+                        raise ValueError("Use /model <ollama-model-name>")
+                    config.ollama_model = target_model
+                    config.save()
+                    console.print(_centered(_model_panel(config), width=96))
                     continue
                 if command.name == "/settings":
                     console.print(_centered(_settings_table(config), width=96))
@@ -594,7 +634,7 @@ def run_shell(config: AppConfig) -> None:
                         )
                     )
                     continue
-                if command.name not in {"/youtube", "/instagram", "/yt", "/ig"}:
+                if command.name not in {"/youtube", "/instagram"}:
                     raise ValueError(f"Unknown command: {command.name}")
                 if not command.argument:
                     raise ValueError("A URL is required for this command")

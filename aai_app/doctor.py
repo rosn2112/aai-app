@@ -46,6 +46,14 @@ def _ollama_status(config: AppConfig) -> tuple[bool, str]:
     return False, f"{config.ollama_model or 'missing model'} not found at {base_url}"
 
 
+def list_ollama_models(config: AppConfig) -> list[str]:
+    base_url = config.ollama_base_url.rstrip("/")
+    request = urllib.request.Request(f"{base_url}/api/tags", method="GET")
+    with urllib.request.urlopen(request, timeout=3) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return [item.get("name", "") for item in payload.get("models", []) if item.get("name")]
+
+
 def run_doctor(config: AppConfig) -> list[DoctorCheck]:
     ollama_ok, ollama_detail = _ollama_status(config)
     checks = [
