@@ -42,3 +42,10 @@ DEFAULT_SUMMARY_PROMPT = (
     "4. Notable claims or calls to action\n"
     "Keep the summary factual, concise, and readable in a terminal."
 )
+DEFAULT_TRANSCRIPT_CORRECTION_PROMPT = (
+    "You are correcting an automatic speech transcript from a Hindi and Sanskrit terminologies in spiritual discourses by Srila Prabhupada who is the founder of Hare Krishna movement.\n"
+    "Fix obvious ASR mistakes, especially names, Hindi words, Sanskrit words, mantra fragments, and transliterated terms.\n"
+    "DO NOT ADD information that was not spoken at all.\n"
+    "Preserve all the proper meanings, sequences, and paragraph flow.\n"
+    "Return only the corrected transcript in plain text."
+)

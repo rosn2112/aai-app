@@ -111,7 +111,11 @@ def main() -> None:
                 console,
                 keep_downloads=media_request.keep_downloads,
             )
-            console.print(result.summary)
+            console.print(Panel(result.summary, title="Summary", border_style="green"))
+            if result.corrected_transcript.strip():
+                console.print(Panel(result.corrected_transcript, title="Corrected Transcript", border_style="cyan"))
+            if result.transcript.strip():
+                console.print(Panel(result.transcript, title="Raw Transcript", border_style="grey50"))
         except Exception as exc:
             console.print(
                 Panel(

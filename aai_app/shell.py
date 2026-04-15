@@ -209,6 +209,34 @@ def _summary_result_panel(summary: str, backend: str, platform_name: str, artifa
     return Panel(body, title="Summary", subtitle="Output", border_style="#22c55e", padding=(1, 3), width=96)
 
 
+def _transcript_panel(title: str, content: str, border_style: str) -> Panel:
+    return Panel(
+        render_message_content(content.strip() if content.strip() else "(empty)"),
+        title=title,
+        border_style=border_style,
+        padding=(1, 3),
+        width=96,
+    )
+
+
+def _summary_output_group(
+    summary: str,
+    transcript: str,
+    corrected_transcript: str,
+    backend: str,
+    platform_name: str,
+    artifact_dir: str | None,
+) -> Group:
+    renderables: list[object] = [
+        _summary_result_panel(summary, backend, platform_name, artifact_dir),
+    ]
+    if corrected_transcript.strip():
+        renderables.append(_transcript_panel("Corrected Transcript", corrected_transcript, "#38bdf8"))
+    if transcript.strip():
+        renderables.append(_transcript_panel("Raw Transcript", transcript, "#475569"))
+    return Group(*renderables)
+
+
 def _chat_panel(
     reply: str,
     backend: str,
@@ -532,8 +560,10 @@ def run_shell(config: AppConfig) -> None:
                 )
                 console.print(
                     _centered(
-                        _summary_result_panel(
+                        _summary_output_group(
                             result.summary,
+                            result.transcript,
+                            result.corrected_transcript,
                             result.backend,
                             result.platform,
                             result.artifact_dir,
